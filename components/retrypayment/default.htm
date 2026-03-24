@@ -1,12 +1,12 @@
 {% if bIsRetryable %}
-<div class="retry-payment-container text-center mb-30" style="position: relative;">
-    <div class="retry-payment-overlay overlay oc-loading" style="display:none">
-        <div class="preloader"></div>
-        <h4 class="preloader-center alert alert-success">
-            {{ 'logingrupa.retrypaymentshopaholic::lang.component.loading'|trans }}
-        </h4>
-    </div>
+<div class="retry-payment-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column;">
+    <div class="preloader" style="margin-bottom:20px;"></div>
+    <h4 class="alert alert-success">
+        {{ 'logingrupa.retrypaymentshopaholic::lang.component.loading'|trans }}
+    </h4>
+</div>
 
+<div class="retry-payment-container text-center mb-30">
     <h3>{{ 'logingrupa.retrypaymentshopaholic::lang.component.heading'|trans }}</h3>
     <p>{{ 'logingrupa.retrypaymentshopaholic::lang.component.description_text'|trans }}</p>
 
@@ -27,7 +27,7 @@
                 data-request="RetryPayment::onRetryPayment"
                 data-request-flash
                 data-attach-loading
-                data-request-before-send="document.querySelector('.retry-payment-overlay').style.display=''"
+                data-request-before-send="document.querySelector('.retry-payment-overlay').style.display='flex'"
                 data-request-complete="document.querySelector('.retry-payment-overlay').style.display='none'"
                 class="lezada-button lezada-button--medium">
             {{ 'logingrupa.retrypaymentshopaholic::lang.component.button'|trans }}
