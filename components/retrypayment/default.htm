@@ -1,0 +1,27 @@
+{% if bIsRetryable %}
+<div class="retry-payment-container text-center mb-30">
+    <h3>{{ 'Retry payment'|_ }}</h3>
+    <p>{{ 'Your payment was not completed. You can try again with the same or a different payment method.'|_ }}</p>
+
+    <form id="retry-payment-form">
+        <div class="retry-payment-methods mb-20">
+            {% for obPaymentMethod in obPaymentMethodList %}
+                <label class="retry-payment-method d-block mb-10">
+                    <input type="radio"
+                           name="payment_method_id"
+                           value="{{ obPaymentMethod.id }}"
+                           {{ obPaymentMethod.id == iCurrentPaymentMethodId ? 'checked' : '' }}>
+                    {{ obPaymentMethod.name }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <button type="button"
+                data-request="RetryPayment::onRetryPayment"
+                data-request-form="#retry-payment-form"
+                class="lezada-button lezada-button--medium">
+            {{ 'Retry payment'|_ }}
+        </button>
+    </form>
+</div>
+{% endif %}

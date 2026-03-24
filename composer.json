@@ -1,0 +1,41 @@
+{
+    "name": "logingrupa/oc-retrypayment-plugin",
+    "type": "october-plugin",
+    "description": "Retry payment for failed or cancelled orders in Lovata Shopaholic.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Logingrupa",
+            "email": "info@logingrupa.lv"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "october/system": "^4.0",
+        "october/rain": "^4.0",
+        "lovata/toolbox-plugin": "^2.2",
+        "lovata/ordersshopaholic-plugin": "^1.33"
+    },
+    "autoload": {
+        "psr-4": {
+            "Logingrupa\\RetrypaymentShopaholic\\": ""
+        }
+    },
+    "scripts": {
+        "test": "../../../vendor/bin/pest --configuration phpunit.xml",
+        "analyse": "../../../vendor/bin/phpstan analyse --configuration=phpstan.neon",
+        "baseline": "../../../vendor/bin/phpstan analyse --configuration=phpstan.neon --generate-baseline=phpstan-baseline.neon",
+        "phpmd": "../../../vendor/bin/phpmd classes,components,Plugin.php text phpmd.xml",
+        "pint": "../../../vendor/bin/pint . --config=pint.json",
+        "pint-test": "../../../vendor/bin/pint . --config=pint.json --test",
+        "rector-dry": "../../../vendor/bin/rector process --config=rector.php --dry-run",
+        "rector": "../../../vendor/bin/rector process --config=rector.php",
+        "qa": ["@pint-test", "@analyse", "@phpmd", "@test"]
+    },
+    "extra": {
+        "october": {
+            "plugin": "Logingrupa.RetrypaymentShopaholic",
+            "installer-name": "retrypaymentshopaholic"
+        }
+    }
+}
