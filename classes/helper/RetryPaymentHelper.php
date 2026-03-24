@@ -1,9 +1,11 @@
 <?php namespace Logingrupa\RetrypaymentShopaholic\Classes\Helper;
 
 use Logingrupa\RetrypaymentShopaholic\Classes\Store\RetryableStatusListStore;
+use Lovata\OrdersShopaholic\Classes\Store\PaymentMethodListStore;
 use Lovata\OrdersShopaholic\Interfaces\PaymentGatewayInterface;
 use Lovata\OrdersShopaholic\Models\Order;
 use Lovata\OrdersShopaholic\Models\PaymentMethod;
+use October\Rain\Exception\ApplicationException;
 
 /**
  * Class RetryPaymentHelper
@@ -51,14 +53,21 @@ class RetryPaymentHelper
     public static function retry(Order $obOrder, int $iPaymentMethodId): PaymentGatewayInterface
     {
         if (!self::isRetryable($obOrder)) {
-            throw new \RuntimeException(
+            throw new ApplicationException(
                 trans('logingrupa.retrypaymentshopaholic::lang.component.error_not_retryable')
             );
         }
 
-        $obPaymentMethod = PaymentMethod::isActive()->find($iPaymentMethodId);
+        $arActivePaymentMethodIdList = PaymentMethodListStore::instance()->active->get();
+        if (!in_array($iPaymentMethodId, $arActivePaymentMethodIdList)) {
+            throw new ApplicationException(
+                trans('logingrupa.retrypaymentshopaholic::lang.component.error_no_gateway')
+            );
+        }
+
+        $obPaymentMethod = PaymentMethod::find($iPaymentMethodId);
         if (empty($obPaymentMethod)) {
-            throw new \RuntimeException(
+            throw new ApplicationException(
                 trans('logingrupa.retrypaymentshopaholic::lang.component.error_no_gateway')
             );
         }
@@ -66,7 +75,7 @@ class RetryPaymentHelper
         /** @var PaymentGatewayInterface|null $obGateway */
         $obGateway = $obPaymentMethod->gateway;
         if (empty($obGateway)) {
-            throw new \RuntimeException(
+            throw new ApplicationException(
                 trans('logingrupa.retrypaymentshopaholic::lang.component.error_no_gateway')
             );
         }

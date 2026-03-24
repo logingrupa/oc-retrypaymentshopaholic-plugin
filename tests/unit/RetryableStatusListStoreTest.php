@@ -9,11 +9,10 @@ use Lovata\OrdersShopaholic\Models\Status;
 uses(RetryPaymentTestCase::class);
 
 beforeEach(function () {
-    // Ensure the retryable statuses exist in the database
+    // Ensure the retryable statuses exist in the database — use forceCreate to set specific IDs
     foreach (RetryableStatusListStore::RETRYABLE_STATUS_IDS as $iStatusId) {
-        Status::firstOrCreate(
-            ['id' => $iStatusId],
-            ['name' => 'Test Status ' . $iStatusId, 'code' => 'test_status_' . $iStatusId]
+        Status::forceCreate(
+            ['id' => $iStatusId, 'name' => 'Test Status ' . $iStatusId, 'code' => 'test_status_' . $iStatusId]
         );
     }
 

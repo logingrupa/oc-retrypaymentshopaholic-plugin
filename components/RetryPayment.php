@@ -1,7 +1,7 @@
 <?php namespace Logingrupa\RetrypaymentShopaholic\Components;
 
 use Cms\Classes\ComponentBase;
-use Kharanenka\Helper\Result;
+use Flash;
 use Logingrupa\RetrypaymentShopaholic\Classes\Helper\RetryPaymentHelper;
 use Lovata\OrdersShopaholic\Components\OrderPage;
 use Lovata\OrdersShopaholic\Models\Order;
@@ -56,9 +56,16 @@ class RetryPayment extends ComponentBase
     {
         /** @var OrderPage|null $obOrderPage */
         $obOrderPage = $this->controller->findComponentByName('OrderPage');
-        if ($obOrderPage !== null && !empty($obOrderPage->obElement)) {
-            $this->obOrder = $obOrderPage->obElement;
+        if ($obOrderPage === null) {
+            return;
         }
+
+        $obOrderItem = $obOrderPage->get();
+        if (empty($obOrderItem) || empty($obOrderItem->id)) {
+            return;
+        }
+
+        $this->obOrder = Order::find($obOrderItem->id);
     }
 
     /**
@@ -80,7 +87,7 @@ class RetryPayment extends ComponentBase
             return;
         }
 
-        $this->obPaymentMethodList = PaymentMethod::isActive()
+        $this->obPaymentMethodList = PaymentMethod::where('active', true)
             ->whereNotNull('gateway_id')
             ->where('gateway_id', '!=', '')
             ->get();
@@ -105,25 +112,21 @@ class RetryPayment extends ComponentBase
                 );
             }
 
-            $iPaymentMethodId = (int) post('payment_method_id');
+            $iPaymentMethodId = (int) post('retry_payment_method_id');
 
             $obGateway = RetryPaymentHelper::retry($this->obOrder, $iPaymentMethodId);
 
             if ($obGateway->isRedirect()) {
-                $sRedirectURL = $obGateway->getRedirectURL();
-
-                return Redirect::to($sRedirectURL);
+                return Redirect::to($obGateway->getRedirectURL());
             }
 
             if ($obGateway->isSuccessful()) {
-                Result::setTrue($obGateway->getResponse());
+                Flash::success(trans('logingrupa.retrypaymentshopaholic::lang.component.success'));
             } else {
-                Result::setFalse($obGateway->getResponse());
+                Flash::error($obGateway->getMessage());
             }
-
-            return Result::setMessage($obGateway->getMessage())->get();
         } catch (\Exception $obException) {
-            return Result::setFalse()->setMessage($obException->getMessage())->get();
+            Flash::error($obException->getMessage());
         }
     }
 }

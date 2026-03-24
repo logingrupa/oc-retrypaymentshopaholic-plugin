@@ -16,8 +16,6 @@ class RetryableStatusListStore extends AbstractStoreWithoutParam
     /** @var list<int> Status IDs eligible for payment retry */
     public const RETRYABLE_STATUS_IDS = [4, 6, 7];
 
-    protected static string $instance = self::class;
-
     /**
      * Get the list of retryable status IDs from the database.
      * Only returns IDs that actually exist in the statuses table.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Logingrupa\RetrypaymentShopaholic\Classes\Helper\RetryPaymentHelper;
 use Logingrupa\RetrypaymentShopaholic\Classes\Store\RetryableStatusListStore;
 use Logingrupa\RetrypaymentShopaholic\Tests\RetryPaymentTestCase;
+use Logingrupa\RetrypaymentShopaholic\Tests\Fixtures\FakePaymentGateway;
 use Lovata\OrdersShopaholic\Interfaces\PaymentGatewayInterface;
 use Lovata\OrdersShopaholic\Models\Order;
 use Lovata\OrdersShopaholic\Models\PaymentMethod;
@@ -13,19 +14,19 @@ use Lovata\OrdersShopaholic\Models\Status;
 uses(RetryPaymentTestCase::class);
 
 beforeEach(function () {
-    // Create retryable statuses
+    // Create retryable statuses — use forceCreate to set specific IDs
     foreach (RetryableStatusListStore::RETRYABLE_STATUS_IDS as $iStatusId) {
-        Status::firstOrCreate(
-            ['id' => $iStatusId],
-            ['name' => 'Test Status ' . $iStatusId, 'code' => 'test_status_' . $iStatusId]
+        Status::forceCreate(
+            ['id' => $iStatusId, 'name' => 'Test Status ' . $iStatusId, 'code' => 'test_status_' . $iStatusId]
         );
     }
 
     // Create non-retryable statuses
-    Status::firstOrCreate(['id' => 3], ['name' => 'Order Complete', 'code' => 'complete']);
-    Status::firstOrCreate(['id' => 5], ['name' => 'Payment Received', 'code' => 'payment_received']);
+    Status::forceCreate(['id' => 3, 'name' => 'Order Complete', 'code' => 'complete']);
+    Status::forceCreate(['id' => 5, 'name' => 'Payment Received', 'code' => 'payment_received']);
 
     RetryableStatusListStore::instance()->clear();
+    FakePaymentGateway::$bPurchaseCalled = false;
 });
 
 test('it returns true for order with retryable status and no transaction', function () {
@@ -51,9 +52,12 @@ test('it returns false for order with non-retryable status', function () {
 test('it returns false for order with transaction_id set', function () {
     $obOrder = Order::create([
         'status_id' => 6,
-        'transaction_id' => 'TXN123',
         'secret_key' => 'test-secret-003',
     ]);
+
+    // transaction_id is not fillable, so set it directly and save
+    $obOrder->transaction_id = 'TXN123';
+    $obOrder->save();
 
     expect(RetryPaymentHelper::isRetryable($obOrder))->toBeFalse();
 });
@@ -86,26 +90,20 @@ test('it updates payment method and calls gateway on retry', function () {
         'secret_key' => 'test-secret-006',
     ]);
 
-    // Create a mock gateway
-    $obMockGateway = Mockery::mock(PaymentGatewayInterface::class);
-    $obMockGateway->shouldReceive('purchase')->once()->with(Mockery::type(Order::class));
-    $obMockGateway->shouldReceive('isRedirect')->andReturn(true);
-    $obMockGateway->shouldReceive('getRedirectURL')->andReturn('https://gateway.example.com/pay');
+    // Register fake gateway on every PaymentMethod instance via boot event
+    PaymentMethod::extend(function ($obModel) {
+        $obModel->bindEvent('model.afterFetch', function () use ($obModel) {
+            $obModel->addGatewayClass('test_fake_gateway', FakePaymentGateway::class);
+        });
+    });
 
-    // Create payment method and inject mock gateway
+    // Create payment method with a test gateway_id
     $obPaymentMethod = PaymentMethod::create([
         'name' => 'Test Gateway',
         'code' => 'test_gateway',
         'active' => true,
-        'gateway_id' => 'test_gateway',
+        'gateway_id' => 'test_fake_gateway',
     ]);
-
-    // Mock the gateway attribute on the payment method
-    PaymentMethod::extend(function ($obModel) use ($obMockGateway) {
-        $obModel->addDynamicMethod('getGatewayAttribute', function () use ($obMockGateway) {
-            return $obMockGateway;
-        });
-    });
 
     $obGateway = RetryPaymentHelper::retry($obOrder, $obPaymentMethod->id);
 
@@ -113,6 +111,7 @@ test('it updates payment method and calls gateway on retry', function () {
     $obOrder->refresh();
     expect($obOrder->payment_method_id)->toBe($obPaymentMethod->id);
 
-    // Verify gateway was called
-    expect($obGateway)->toBe($obMockGateway);
+    // Verify gateway is the right type
+    expect($obGateway)->toBeInstanceOf(PaymentGatewayInterface::class);
+    expect(FakePaymentGateway::$bPurchaseCalled)->toBeTrue();
 });

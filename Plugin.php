@@ -1,6 +1,8 @@
 <?php namespace Logingrupa\RetrypaymentShopaholic;
 
+use Event;
 use Logingrupa\RetrypaymentShopaholic\Components\RetryPayment;
+use Lovata\OmnipayShopaholic\Classes\Helper\PaymentGateway;
 use System\Classes\PluginBase;
 
 /**
@@ -38,7 +40,32 @@ class Plugin extends PluginBase
      */
     public function boot(): void
     {
-        // No model extensions needed
+        $this->addPaymentGatewayRedirectListeners();
+    }
+
+    /**
+     * Listen to Omnipay gateway cancel/return events and redirect
+     * back to the order checkout page instead of homepage.
+     */
+    protected function addPaymentGatewayRedirectListeners(): void
+    {
+        $fnGetCheckoutURL = function ($obOrder) {
+            if (empty($obOrder) || empty($obOrder->secret_key)) {
+                return null;
+            }
+
+            return url('/checkout/' . $obOrder->secret_key);
+        };
+
+        Event::listen(
+            PaymentGateway::EVENT_GET_PAYMENT_GATEWAY_CANCEL_URL,
+            $fnGetCheckoutURL
+        );
+
+        Event::listen(
+            PaymentGateway::EVENT_GET_PAYMENT_GATEWAY_RETURN_URL,
+            $fnGetCheckoutURL
+        );
     }
 
     /**
