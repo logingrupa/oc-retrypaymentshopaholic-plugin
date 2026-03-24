@@ -54,6 +54,13 @@ class Plugin extends PluginBase
                 return null;
             }
 
+            // Resolve the CMS page that uses OrderPage component dynamically
+            $sPageURL = \Cms\Classes\Page::url('order-complete', ['slug' => $obOrder->secret_key]);
+            if (!empty($sPageURL)) {
+                return $sPageURL;
+            }
+
+            // Fallback if page lookup fails
             return url('/checkout/' . $obOrder->secret_key);
         };
 
