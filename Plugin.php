@@ -54,14 +54,14 @@ class Plugin extends PluginBase
                 return null;
             }
 
-            // Resolve the CMS page that uses OrderPage component dynamically
-            $sPageURL = \Cms\Classes\Page::url('order-complete', ['slug' => $obOrder->secret_key]);
-            if (!empty($sPageURL)) {
-                return $sPageURL;
+            // Find CMS page with both OrderPage and RetryPayment components
+            $sPageName = $this->findOrderPageWithRetry();
+
+            if (!empty($sPageName)) {
+                return \Cms\Classes\Page::url($sPageName, ['slug' => $obOrder->secret_key]);
             }
 
-            // Fallback if page lookup fails
-            return url('/checkout/' . $obOrder->secret_key);
+            return null;
         };
 
         Event::listen(
@@ -73,6 +73,40 @@ class Plugin extends PluginBase
             PaymentGateway::EVENT_GET_PAYMENT_GATEWAY_RETURN_URL,
             $fnGetCheckoutURL
         );
+    }
+
+    /**
+     * Find the CMS page that has both OrderPage and RetryPayment components.
+     * Falls back to first page with OrderPage if RetryPayment not placed yet.
+     *
+     * @return string|null CMS page file name
+     */
+    protected function findOrderPageWithRetry(): ?string
+    {
+        $obTheme = \Cms\Classes\Theme::getActiveTheme();
+        $arPages = \Cms\Classes\Page::listInTheme($obTheme);
+
+        $sOrderPageFallback = null;
+
+        foreach ($arPages as $obPage) {
+            $arComponents = $obPage->settings['components'] ?? [];
+
+            if (!isset($arComponents['OrderPage'])) {
+                continue;
+            }
+
+            // Prefer page with both OrderPage and RetryPayment
+            if (isset($arComponents['RetryPayment'])) {
+                return $obPage->getBaseFileName();
+            }
+
+            // Remember first OrderPage as fallback
+            if ($sOrderPageFallback === null) {
+                $sOrderPageFallback = $obPage->getBaseFileName();
+            }
+        }
+
+        return $sOrderPageFallback;
     }
 
     /**
