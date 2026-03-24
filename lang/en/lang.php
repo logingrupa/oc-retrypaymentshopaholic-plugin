@@ -9,6 +9,7 @@
         'heading' => 'Retry payment',
         'description_text' => 'Your payment was not completed. You can try again with the same or a different payment method.',
         'button' => 'Retry payment',
+        'loading' => 'Please wait while your payment is being processed...',
         'error_not_retryable' => 'This order cannot be retried for payment.',
         'error_no_gateway' => 'The selected payment method does not support online payment.',
     ],

@@ -1,5 +1,12 @@
 {% if bIsRetryable %}
-<div class="retry-payment-container text-center mb-30">
+<div class="retry-payment-container text-center mb-30" style="position: relative;">
+    <div class="retry-payment-overlay overlay oc-loading" style="display:none">
+        <div class="preloader"></div>
+        <h4 class="preloader-center alert alert-success">
+            {{ 'logingrupa.retrypaymentshopaholic::lang.component.loading'|trans }}
+        </h4>
+    </div>
+
     <h3>{{ 'logingrupa.retrypaymentshopaholic::lang.component.heading'|trans }}</h3>
     <p>{{ 'logingrupa.retrypaymentshopaholic::lang.component.description_text'|trans }}</p>
 
@@ -19,6 +26,9 @@
         <button type="button"
                 data-request="RetryPayment::onRetryPayment"
                 data-request-flash
+                data-attach-loading
+                data-request-before-send="document.querySelector('.retry-payment-overlay').style.display=''"
+                data-request-complete="document.querySelector('.retry-payment-overlay').style.display='none'"
                 class="lezada-button lezada-button--medium">
             {{ 'logingrupa.retrypaymentshopaholic::lang.component.button'|trans }}
         </button>
