@@ -1,2 +1,4 @@
 "1.0.0":
   - "Initialize plugin."
+"1.0.1":
+  - "Non-retryable retry test expects ApplicationException, matching what retry() actually throws (a translated, user-facing October flash rather than a bare RuntimeException); the stale @throws docblock updated with it. Test and docs only."

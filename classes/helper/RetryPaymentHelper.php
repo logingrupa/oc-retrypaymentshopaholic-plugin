@@ -48,7 +48,7 @@ class RetryPaymentHelper
      * @param int   $iPaymentMethodId
      * @return PaymentGatewayInterface The gateway object (caller checks isRedirect/isSuccessful)
      *
-     * @throws \RuntimeException When order is not retryable or payment method is invalid
+     * @throws \October\Rain\Exception\ApplicationException When order is not retryable or payment method is invalid
      */
     public static function retry(Order $obOrder, int $iPaymentMethodId): PaymentGatewayInterface
     {

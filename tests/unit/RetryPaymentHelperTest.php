@@ -80,7 +80,7 @@ test('it throws when retrying non-retryable order', function () {
     ]);
 
     RetryPaymentHelper::retry($obOrder, 1);
-})->throws(RuntimeException::class);
+})->throws(\October\Rain\Exception\ApplicationException::class);
 
 test('it updates payment method and calls gateway on retry', function () {
     $obOrder = Order::create([
