@@ -19,8 +19,8 @@ Requires Lovata.OrdersShopaholic (uses Lovata.OmnipayShopaholic PaymentGateway e
                        first page with OrderPage only
 - components/          RetryPayment (retry UI + handlers, retrypayment partials)
 - classes/helper/      RetryPaymentHelper
-- classes/store/       RetryableStatusListStore (which order statuses allow retry)
-- lang/                en, lt, lv, nb, ru
+- classes/store/       RetryableStatusListStore (unpaid status CODES that allow retry and cancel)
+- lang/                en, lt, lv, nb-no, ru (nb-no is the locale .no runs, plain nb was never read)
 - updates/             version.yaml only (no migrations)
 
 ## Quality gates

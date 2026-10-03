@@ -6,26 +6,29 @@ use Lovata\Toolbox\Classes\Store\AbstractStoreWithoutParam;
 /**
  * Class RetryableStatusListStore
  * @package Logingrupa\RetrypaymentShopaholic\Classes\Store
- * @author Logingrupa
  *
- * Returns cached array of status IDs for which payment retry is allowed.
- * 4 = Order Cancelled, 6 = Payment CANCELLED, 7 = Payment NOT MADE
+ * Ids of the statuses an unpaid order can sit in: placed and waiting for a transfer or an
+ * invoice, an online payment started, or one the gateway reported canceled or failed.
+ * Status ids differ per shop, the codes do not. Canceled and paid orders are never here.
  */
 class RetryableStatusListStore extends AbstractStoreWithoutParam
 {
-    /** @var list<int> Status IDs eligible for payment retry */
-    public const RETRYABLE_STATUS_IDS = [4, 6, 7];
+    public const RETRYABLE_STATUS_CODES = [
+        'new',
+        'in_progress',
+        'payment-pending',
+        'new-payment-canceled',
+        'new-payment-error',
+    ];
 
     /**
-     * Get the list of retryable status IDs from the database.
-     * Only returns IDs that actually exist in the statuses table.
-     *
-     * @return list<int>
+     * @return array
      */
     protected function getIDListFromDB(): array
     {
-        return Status::whereIn('id', self::RETRYABLE_STATUS_IDS)
+        return Status::whereIn('code', self::RETRYABLE_STATUS_CODES)
             ->pluck('id')
+            ->map(fn ($iStatusId) => (int) $iStatusId)
             ->all();
     }
 }

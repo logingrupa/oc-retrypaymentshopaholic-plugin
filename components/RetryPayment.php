@@ -3,9 +3,8 @@
 use Cms\Classes\ComponentBase;
 use Flash;
 use Logingrupa\RetrypaymentShopaholic\Classes\Helper\RetryPaymentHelper;
-use Lovata\OrdersShopaholic\Components\OrderPage;
 use Lovata\OrdersShopaholic\Models\Order;
-use Lovata\OrdersShopaholic\Models\PaymentMethod;
+use October\Rain\Exception\ApplicationException;
 use Redirect;
 
 /**
@@ -13,25 +12,31 @@ use Redirect;
  * @package Logingrupa\RetrypaymentShopaholic\Components
  * @author Logingrupa
  *
- * CMS component that renders a retry-payment form on the order status page
- * when the order is in a retryable status (cancelled / payment failed).
+ * On the order page of an unpaid order: pay again with any visible payment method, switch
+ * to a method without a gateway such as bank transfer, or cancel the order. ?cancel=1 in
+ * the page address opens the cancel confirmation, the link the last payment reminder uses.
  */
 class RetryPayment extends ComponentBase
 {
-    /** @var bool Whether the current order can be retried */
+    public const CANCEL_QUERY_FLAG = 'cancel';
+
+    /** @var bool Whether the current order is unpaid and can be paid or canceled */
     public bool $bIsRetryable = false;
 
-    /** @var \October\Rain\Database\Collection<PaymentMethod>|null Active gateway-backed payment methods */
+    /** @var \Illuminate\Support\Collection|null Active payment methods visible to this visitor */
     public $obPaymentMethodList = null;
 
     /** @var int Current payment method ID on the order */
     public int $iCurrentPaymentMethodId = 0;
 
+    /** @var bool The page was opened from the cancel link */
+    public bool $bCancelRequested = false;
+
     /** @var Order|null The order model from OrderPage */
     protected ?Order $obOrder = null;
 
     /**
-     * @return array<string, string>
+     * @return array
      */
     public function componentDetails(): array
     {
@@ -42,7 +47,7 @@ class RetryPayment extends ComponentBase
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array
      */
     public function defineProperties(): array
     {
@@ -50,11 +55,10 @@ class RetryPayment extends ComponentBase
     }
 
     /**
-     * Init: find OrderPage component on the same page and read its order.
+     * Resolve the order from the OrderPage component on the same page.
      */
     public function init(): void
     {
-        /** @var OrderPage|null $obOrderPage */
         $obOrderPage = $this->controller->findComponentByName('OrderPage');
         if ($obOrderPage === null) {
             return;
@@ -69,64 +73,101 @@ class RetryPayment extends ComponentBase
     }
 
     /**
-     * On run: determine retryability and load payment methods.
+     * Expose the retry state and the method list to the page.
      */
     public function onRun(): void
     {
-        if ($this->obOrder === null) {
-            $this->bIsRetryable = false;
-            $this->page['bIsRetryable'] = false;
-
-            return;
-        }
-
-        $this->bIsRetryable = RetryPaymentHelper::isRetryable($this->obOrder);
+        $this->bIsRetryable = $this->obOrder !== null && RetryPaymentHelper::isRetryable($this->obOrder);
         $this->page['bIsRetryable'] = $this->bIsRetryable;
 
         if (!$this->bIsRetryable) {
             return;
         }
 
-        $this->obPaymentMethodList = PaymentMethod::where('active', true)
-            ->whereNotNull('gateway_id')
-            ->where('gateway_id', '!=', '')
-            ->get();
-
+        $this->obPaymentMethodList = RetryPaymentHelper::getPaymentMethodList();
         $this->iCurrentPaymentMethodId = (int) $this->obOrder->payment_method_id;
+        $this->bCancelRequested = get(self::CANCEL_QUERY_FLAG) === '1';
 
         $this->page['obPaymentMethodList'] = $this->obPaymentMethodList;
         $this->page['iCurrentPaymentMethodId'] = $this->iCurrentPaymentMethodId;
+        $this->page['bCancelRequested'] = $this->bCancelRequested;
     }
 
     /**
-     * AJAX handler: retry payment with selected payment method.
-     *
-     * @return \Illuminate\Http\RedirectResponse|array
+     * Pay with the chosen method: online methods redirect to their gateway, a method
+     * without a gateway (bank transfer) is switched on and the page reloads with its details.
+     * @return mixed
      */
     public function onRetryPayment()
     {
         try {
-            if ($this->obOrder === null) {
-                throw new \RuntimeException(
-                    trans('logingrupa.retrypaymentshopaholic::lang.component.error_not_retryable')
-                );
-            }
-
+            $obOrder = $this->getOrderOrFail();
             $iPaymentMethodId = (int) post('retry_payment_method_id');
 
-            $obGateway = RetryPaymentHelper::retry($this->obOrder, $iPaymentMethodId);
+            if ($this->isOfflineMethod($iPaymentMethodId)) {
+                RetryPaymentHelper::switchToOffline($obOrder, $iPaymentMethodId);
+                Flash::success(trans('logingrupa.retrypaymentshopaholic::lang.component.switched_to_offline'));
 
+                return Redirect::refresh();
+            }
+
+            $obGateway = RetryPaymentHelper::retry($obOrder, $iPaymentMethodId);
             if ($obGateway->isRedirect()) {
                 return Redirect::to($obGateway->getRedirectURL());
             }
 
             if ($obGateway->isSuccessful()) {
                 Flash::success(trans('logingrupa.retrypaymentshopaholic::lang.component.success'));
-            } else {
-                Flash::error($obGateway->getMessage());
+
+                return Redirect::refresh();
             }
-        } catch (\Exception $obException) {
+
+            Flash::error($obGateway->getMessage());
+        } catch (ApplicationException $obException) {
             Flash::error($obException->getMessage());
         }
+
+        return null;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function onCancelOrder()
+    {
+        try {
+            RetryPaymentHelper::cancel($this->getOrderOrFail());
+            Flash::success(trans('logingrupa.retrypaymentshopaholic::lang.component.canceled'));
+
+            return Redirect::to($this->currentPageUrl([]));
+        } catch (ApplicationException $obException) {
+            Flash::error($obException->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * @return Order
+     * @throws ApplicationException
+     */
+    protected function getOrderOrFail(): Order
+    {
+        if ($this->obOrder === null) {
+            throw new ApplicationException(trans('logingrupa.retrypaymentshopaholic::lang.component.error_not_retryable'));
+        }
+
+        return $this->obOrder;
+    }
+
+    /**
+     * @param int $iPaymentMethodId
+     * @return bool
+     */
+    protected function isOfflineMethod(int $iPaymentMethodId): bool
+    {
+        $obPaymentMethod = RetryPaymentHelper::getPaymentMethodList()->firstWhere('id', $iPaymentMethodId);
+
+        return $obPaymentMethod !== null && empty($obPaymentMethod->gateway_id);
     }
 }

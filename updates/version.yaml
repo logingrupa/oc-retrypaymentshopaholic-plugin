@@ -2,3 +2,5 @@
   - "Initialize plugin."
 "1.0.1":
   - "Non-retryable retry test expects ApplicationException, matching what retry() actually throws (a translated, user-facing October flash rather than a bare RuntimeException); the stale @throws docblock updated with it. Test and docs only."
+"1.1.0":
+  - "Unpaid orders are retryable by status code (new, in_progress, payment-pending, payment canceled or failed), canceled ones no longer. The method list holds every visible active method, bank transfer included; choosing one without a gateway switches the order to it. Customers can cancel an unpaid order (?cancel=1 opens the confirmation). Norwegian moved to lang/nb-no, the locale .no runs."

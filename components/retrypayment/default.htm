@@ -36,5 +36,15 @@
             {{ 'logingrupa.retrypaymentshopaholic::lang.component.button'|trans }}
         </button>
     </form>
+
+    <form class="mt-20">
+        <button type="button"
+                data-request="RetryPayment::onCancelOrder"
+                data-request-flash
+                data-request-confirm="{{ 'logingrupa.retrypaymentshopaholic::lang.component.cancel_confirm'|trans }}?"
+                class="lezada-button lezada-button--small">
+            {{ 'logingrupa.retrypaymentshopaholic::lang.component.cancel_button'|trans }}
+        </button>
+    </form>
 </div>
 {% endif %}

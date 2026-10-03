@@ -12,5 +12,12 @@
         'loading' => 'Lūdzu, uzgaidiet, kamēr tiek apstrādāts jūsu maksājums...',
         'error_not_retryable' => 'Šim pasūtījumam nevar atkārtot maksājumu.',
         'error_no_gateway' => 'Izvēlētajai maksājuma metodei nav pieejama tiešsaistes apmaksa.',
+        'success' => 'Apmaksa saņemta, paldies.',
+        'switched_to_offline' => 'Apmaksas veids nomainīts. Informāciju nosūtījām uz Jūsu e-pastu.',
+        'canceled' => 'Pasūtījums atcelts.',
+        'error_not_cancelable' => 'Šo pasūtījumu vairs nevar atcelt.',
+        'error_payment_method' => 'Šis maksāšanas veids nav pieejams.',
+        'cancel_button' => 'Atcelt pasūtījumu',
+        'cancel_confirm' => 'Jā, atcelt pasūtījumu',
     ],
 ];
